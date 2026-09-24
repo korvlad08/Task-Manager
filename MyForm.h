@@ -2,6 +2,9 @@
 
 namespace TaskManager {
 
+	#include "Services/ProcessService.h"
+	#include "Utils/Format.h"
+
 	using namespace System;
 	using namespace System::ComponentModel;
 	using namespace System::Collections;
@@ -165,14 +168,30 @@ namespace TaskManager {
 			AddCol("User objects", 60, R);
 		}
 
-		void AddTestRow()
+		void LoadProcess()
 		{
-			ListViewItem^ it = gcnew ListViewItem("chrome.exe");
-			it->SubItems->AddRange(gcnew array<String^>{
-				"8756", "Running", "Normal", "1", "Acer", "00", "00:00:42",
-					"-40 K", "269,032 K", "326,232 K", "155,144 K", "276,003",
-					"1,662", "45", "60" });
-			lvProcesses->Items->Add(it);
+			ProcessService^ ProcessList = gcnew ProcessService();
+			lvProcesses->BeginUpdate();
+			lvProcesses->Items->Clear();
+
+			for each (ProcessInfo ^ p in ProcessList->GetProcesses())
+			{
+				ListViewItem^ it = gcnew ListViewItem(p->GetName());
+				it->SubItems->Add(p->GetPID().ToString());
+				it->SubItems->Add(Format::State(p->GetState()));
+				it->SubItems->Add(p->GetPriorityClass());
+				it->SubItems->Add(p->GetOwnerName());
+				it->SubItems->Add(p->GetCpuPercent().ToString("00"));
+				it->SubItems->Add(Format::Time(p->GetCpuTime()));
+				it->SubItems->Add(Format::Kb(p->GetWorkingSet()));
+				it->SubItems->Add(Format::Kb(p->GetVirtualSize()));
+				it->SubItems->Add(Format::Kb(p->GetPrivateBytes()));
+				it->SubItems->Add(p->GetThreadCount().ToString());
+				it->SubItems->Add(p->GetOwnerSid());
+				it->SubItems->Add(p->GetFullPath());
+				lvProcesses->Items->Add(it);
+			}
+			lvProcesses->EndUpdate();
 		}
 	};
 }
