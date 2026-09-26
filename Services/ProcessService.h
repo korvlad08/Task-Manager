@@ -3,23 +3,29 @@
 
 using namespace System;
 using namespace System::Collections::Generic;
-using namespace System::Diagnostics;
 
 public ref class ProcessService
 {
-private:
-	Dictionary<int, Int64>^ prevWorkingSet;
-	Dictionary<int, TimeSpan>^ prevCpuTime;
-	DateTime lastUpdate;
-
-	void FillBasic(Process^ proc, ProcessInfo^ info);
-	void FillNative(ProcessInfo^ info);
-	void FillDeltas(ProcessInfo^ info, double elapsedMs,
-		Dictionary<int, Int64>^ newWorkSet,
-		Dictionary<int, TimeSpan>^ newCpu);
-
-	static String^ ReadUser(void* hProcess);
 public:
-	List<ProcessInfo^>^ GetProcesses();
-	ProcessService();
+    ProcessService();
+    List<ProcessInfo^>^ GetProcesses();
+
+private:
+    Dictionary<int, TimeSpan>^ prevCpuTime;
+    DateTime lastUpdate;
+
+    List<int>^ suspendedProcesses;
+    List<int>^ partiallySuspended;
+
+    static void* OpenForQuery(int pid, bool% fullAccess);
+    static String^ ReadPath(void* h);
+    static TimeSpan ReadCpuTime(void* h);
+    static String^ ReadPriority(void* h);
+    static void ReadMemory(void* h, ProcessInfo^ info);
+    static Int64 ReadVirtualSize(void* h);
+    static void ReadOwner(void* h, ProcessInfo^ info);
+
+    ProcessState ReadState(int pid, void* h);
+    void CalcCpuPercent(ProcessInfo^ info, double elapsedMs,
+        Dictionary<int, TimeSpan>^ newCpu);
 };
