@@ -1,9 +1,10 @@
 #pragma once
 
-namespace TaskManager {
+#include "Services/ProcessService.h"
+#include "Utils/Format.h"
+#include "ProcessDetailForm.h"
 
-	#include "Services/ProcessService.h"
-	#include "Utils/Format.h"
+namespace TaskManager {
 
 	using namespace System;
 	using namespace System::ComponentModel;
@@ -21,9 +22,9 @@ namespace TaskManager {
 		MyForm(void)
 		{
 			InitializeComponent();
-			//
-			//TODO: Add the constructor code here
-			//
+			service = gcnew ProcessService();
+			SetupColumns();
+			LoadProcess();
 		}
 
 	protected:
@@ -50,10 +51,16 @@ namespace TaskManager {
 	protected:
 
 	private:
-		/// <summary>
+		ProcessService^ service;
+	private: System::Windows::Forms::ImageList^ ImgIcons;
+	private: System::Windows::Forms::ContextMenuStrip^ cmsProcess;
+	private: System::Windows::Forms::ToolStripMenuItem^ showThreadsToolStripMenuItem;
+
+	private: System::ComponentModel::IContainer^ components;
+		   /// <summary>
 		/// Required designer variable.
 		/// </summary>
-		System::ComponentModel::Container ^components;
+
 
 #pragma region Windows Form Designer generated code
 		/// <summary>
@@ -62,12 +69,17 @@ namespace TaskManager {
 		/// </summary>
 		void InitializeComponent(void)
 		{
+			this->components = (gcnew System::ComponentModel::Container());
 			this->menuStrip1 = (gcnew System::Windows::Forms::MenuStrip());
 			this->fileToolStripMenuItem = (gcnew System::Windows::Forms::ToolStripMenuItem());
 			this->optionsToolStripMenuItem = (gcnew System::Windows::Forms::ToolStripMenuItem());
 			this->viewToolStripMenuItem = (gcnew System::Windows::Forms::ToolStripMenuItem());
 			this->lvProcesses = (gcnew System::Windows::Forms::ListView());
+			this->cmsProcess = (gcnew System::Windows::Forms::ContextMenuStrip(this->components));
+			this->showThreadsToolStripMenuItem = (gcnew System::Windows::Forms::ToolStripMenuItem());
+			this->ImgIcons = (gcnew System::Windows::Forms::ImageList(this->components));
 			this->menuStrip1->SuspendLayout();
+			this->cmsProcess->SuspendLayout();
 			this->SuspendLayout();
 			// 
 			// menuStrip1
@@ -103,6 +115,7 @@ namespace TaskManager {
 			// lvProcesses
 			// 
 			this->lvProcesses->BorderStyle = System::Windows::Forms::BorderStyle::None;
+			this->lvProcesses->ContextMenuStrip = this->cmsProcess;
 			this->lvProcesses->Dock = System::Windows::Forms::DockStyle::Fill;
 			this->lvProcesses->FullRowSelect = true;
 			this->lvProcesses->HideSelection = false;
@@ -110,9 +123,30 @@ namespace TaskManager {
 			this->lvProcesses->MultiSelect = false;
 			this->lvProcesses->Name = L"lvProcesses";
 			this->lvProcesses->Size = System::Drawing::Size(1370, 725);
+			this->lvProcesses->SmallImageList = this->ImgIcons;
 			this->lvProcesses->TabIndex = 2;
 			this->lvProcesses->UseCompatibleStateImageBehavior = false;
 			this->lvProcesses->View = System::Windows::Forms::View::Details;
+			// 
+			// cmsProcess
+			// 
+			this->cmsProcess->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(1) { this->showThreadsToolStripMenuItem });
+			this->cmsProcess->Name = L"cmsProcess";
+			this->cmsProcess->Size = System::Drawing::Size(181, 48);
+			this->cmsProcess->Opening += gcnew System::ComponentModel::CancelEventHandler(this, &MyForm::cmsProcess_Opening);
+			// 
+			// showThreadsToolStripMenuItem
+			// 
+			this->showThreadsToolStripMenuItem->Name = L"showThreadsToolStripMenuItem";
+			this->showThreadsToolStripMenuItem->Size = System::Drawing::Size(180, 22);
+			this->showThreadsToolStripMenuItem->Text = L"Show Threads";
+			this->showThreadsToolStripMenuItem->Click += gcnew System::EventHandler(this, &MyForm::showThreadsToolStripMenuItem_Click);
+			// 
+			// ImgIcons
+			// 
+			this->ImgIcons->ColorDepth = System::Windows::Forms::ColorDepth::Depth32Bit;
+			this->ImgIcons->ImageSize = System::Drawing::Size(16, 16);
+			this->ImgIcons->TransparentColor = System::Drawing::Color::Transparent;
 			// 
 			// MyForm
 			// 
@@ -131,10 +165,12 @@ namespace TaskManager {
 			this->WindowState = System::Windows::Forms::FormWindowState::Maximized;
 			this->menuStrip1->ResumeLayout(false);
 			this->menuStrip1->PerformLayout();
+			this->cmsProcess->ResumeLayout(false);
 			this->ResumeLayout(false);
 			this->PerformLayout();
 
 		}
+#pragma endregion
 
 		void AddCol(String^ text, int width, HorizontalAlignment align)
 		{
@@ -150,33 +186,53 @@ namespace TaskManager {
 			HorizontalAlignment L = HorizontalAlignment::Left;
 			HorizontalAlignment R = HorizontalAlignment::Right;
 
-			AddCol("Name", 145, L);
-			AddCol("PID", 55, L);
-			AddCol("Status", 70, L);
-			AddCol("Base priority", 65, L);
-			AddCol("Session ID", 65, L);
-			AddCol("User name", 85, L);
-			AddCol("CPU", 40, L);
-			AddCol("CPU time", 70, L);
-			AddCol("Working set delta", 115, R);
-			AddCol("Working set", 85, R);
-			AddCol("Peak working set", 110, R);
-			AddCol("Commit size", 85, R);
-			AddCol("Page faults", 85, R);
-			AddCol("Handles", 75, R);
+			AddCol("Name", 180, L);
+			AddCol("PID", 60, L);
+			AddCol("Status", 110, L);
+			AddCol("Priority", 90, L);
+			AddCol("User name", 90, L);
+			AddCol("CPU", 45, R);
+			AddCol("CPU time", 75, R);
+			AddCol("Working set", 95, R);
+			AddCol("Virtual size", 105, R);
+			AddCol("Private bytes", 100, R);
 			AddCol("Threads", 60, R);
-			AddCol("User objects", 60, R);
+			AddCol("SID", 200, L);
+			AddCol("Path", 400, L);
+		}
+
+		String^ GetIconKey(String^ path)
+		{
+			if (String::IsNullOrEmpty(path))
+			{
+				return "default";
+			}
+			if (ImgIcons->Images->ContainsKey(path))
+			{
+				return path;
+			}
+
+			try
+			{
+				System::Drawing::Icon^ ic = System::Drawing::Icon::ExtractAssociatedIcon(path);
+				ImgIcons->Images->Add(path, ic);
+				return path;
+			}
+			catch (Exception^)
+			{
+				return "default";
+			}
 		}
 
 		void LoadProcess()
 		{
-			ProcessService^ ProcessList = gcnew ProcessService();
 			lvProcesses->BeginUpdate();
 			lvProcesses->Items->Clear();
 
-			for each (ProcessInfo ^ p in ProcessList->GetProcesses())
+			for each (ProcessInfo ^ p in service->GetProcesses())
 			{
 				ListViewItem^ it = gcnew ListViewItem(p->GetName());
+				ImgIcons->Images->Add("default", SystemIcons::Application);
 				it->SubItems->Add(p->GetPID().ToString());
 				it->SubItems->Add(Format::State(p->GetState()));
 				it->SubItems->Add(p->GetPriorityClass());
@@ -189,9 +245,36 @@ namespace TaskManager {
 				it->SubItems->Add(p->GetThreadCount().ToString());
 				it->SubItems->Add(p->GetOwnerSid());
 				it->SubItems->Add(p->GetFullPath());
+				it->ImageKey = GetIconKey(p->GetFullPath());
+				it->Tag = p;
 				lvProcesses->Items->Add(it);
 			}
 			lvProcesses->EndUpdate();
 		}
-	};
+
+	private:
+		System::Void cmsProcess_Opening(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e)
+		{
+			Point pt = lvProcesses->PointToClient(System::Windows::Forms::Cursor::Position);
+			ListViewItem^ item = lvProcesses->GetItemAt(pt.X, pt.Y);
+
+			if (item == nullptr)
+			{
+				e->Cancel = true;
+			}
+			else
+			{
+				item->Selected = true;
+			}
+		}
+		System::Void showThreadsToolStripMenuItem_Click(System::Object^ sender, System::EventArgs^ e) 
+		{
+			if (lvProcesses->SelectedItems->Count == 0)
+				return;
+
+			ProcessInfo^ p = safe_cast<ProcessInfo^>(lvProcesses->SelectedItems[0]->Tag);
+			ProcessDetailsForm^ details = gcnew ProcessDetailsForm(p);
+			details->ShowDialog(this);
+		}	
+};
 }

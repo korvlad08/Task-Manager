@@ -99,6 +99,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies />
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -108,6 +109,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies />
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -119,20 +121,30 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MyForm.cpp" />
     <ClCompile Include="Services\ProcessService.cpp" />
+    <ClCompile Include="Thread\ThreadService.cpp" />
     <ClCompile Include="Utils\Format.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Models\ProcessInfo.h" />
-    <ClInclude Include="MyForm.h">
+    <ClInclude Include="ProcessDetailForm.h">
+      <FileType>CppForm</FileType>
+    </ClInclude>
+    <ClInclude Include="TaskManager.h">
       <FileType>CppForm</FileType>
     </ClInclude>
     <ClInclude Include="Services\ProcessService.h" />
+    <ClInclude Include="Thread\ThreadInfo.h" />
+    <ClInclude Include="Thread\ThreadService.h" />
     <ClInclude Include="Utils\Format.h" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="MyForm.resx">
-      <DependentUpon>MyForm.h</DependentUpon>
+    <EmbeddedResource Include="ProcessDetailForm.resx">
+      <DependentUpon>ProcessDetailForm.h</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TaskManager.resx">
+      <DependentUpon>TaskManager.h</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

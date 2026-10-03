@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
+
 #include <windows.h>
 #include <tlhelp32.h>
 #include <psapi.h>
@@ -75,12 +76,12 @@ List<ProcessInfo^>^ ProcessService::GetProcesses()
 
             result->Add(info);
 
-        } while (Process32FirstW(snap, &entry));
-
-        CloseHandle(snap);
-        prevCpuTime = newCpu;
-        return result;
+        } while (Process32NextW(snap, &entry));
     }
+
+    CloseHandle(snap);
+    prevCpuTime = newCpu;
+    return result;
 };
 
 void* ProcessService::OpenForQuery(int pid, bool% fullAccess)
@@ -159,7 +160,7 @@ Int64 ProcessService::ReadVirtualSize(void* h)
     MEMORY_BASIC_INFORMATION mbi;
     unsigned char* addr = nullptr;
 
-    while (VirtualQueryEx((HANDLE)h,addr,&mbi, sizeof(mbi) == sizeof(mbi)))
+    while (VirtualQueryEx((HANDLE)h,addr,&mbi, sizeof(mbi)) == sizeof(mbi))
     {
         if (mbi.State == MEM_COMMIT || mbi.State == MEM_RESERVE)
         {
@@ -252,7 +253,7 @@ void ProcessService::CalcCpuPercent(ProcessInfo^ info, double elapsedMs, Diction
 
     if (elapsedMs >0 && prevCpuTime->TryGetValue(pid, oldCpu))
     {
-        double usedMs = (info->GetCpuTime() - oldCpu).TotalMilliseconds;
+        double usedMs = info->GetCpuTime().TotalMilliseconds - oldCpu.TotalMilliseconds;
         double percent = usedMs / (elapsedMs * Environment::ProcessorCount) * 100.0;
 
         info->SetCpuPercent(Math::Min(100.0, Math::Max(0.0, percent)));
@@ -262,6 +263,6 @@ void ProcessService::CalcCpuPercent(ProcessInfo^ info, double elapsedMs, Diction
         info->SetCpuPercent(0);
     }
 
-    newCpu[pid] = info->GetCpuTime();
+    newCpu[pid] = info->GetCpuTime(); 
 
 }
